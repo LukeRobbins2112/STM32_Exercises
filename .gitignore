@@ -1,0 +1,10 @@
+**/Debug/**
+.metadata/**
+**/include
+**/ldscripts
+**/system
+
+**/.settings/**
+**/*.cproject
+**/*.project
+**/write.c
