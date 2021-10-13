@@ -7,4 +7,4 @@
 **/.settings/**
 **/*.cproject
 **/*.project
-**/write.c
+**/_write.c
