@@ -8,3 +8,4 @@
 **/*.cproject
 **/*.project
 **/_write.c
+/.metadata/
