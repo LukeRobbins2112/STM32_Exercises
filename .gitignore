@@ -1,6 +1,7 @@
 **/Debug/**
 .metadata/**
-**/include
+**/include/stm32**
+**include/main.h
 **/ldscripts
 **/system
 
