@@ -16,15 +16,24 @@ static int tx_idx = 0;
 static int bytesToSend = 0;
 
 void processRx(char data) {
-	rx_data[rx_idx++] = data;
-	rx_idx %= RX_MAX;
-	USART2->DR = data;
-
 	// If we get a newline, first send a carriage return
-	if (data == '\r') {
-		while(!(USART2->SR & UART_FLAG_TXE)) {}
-		USART2->DR = '\n';
+	if (data == CARRIAGE_RETURN) {
+		sendData(PROMPT, 8);
+		rx_idx = 0;
 	}
+	else if (data == DELETE) {
+		if (rx_idx) {
+			// Delete previous char, if we have any -- do not delete prompt
+			sendData(BACKSPACE, 3);
+			rx_data[--rx_idx] = NULL_CHAR;
+		}
+	} else {
+		rx_data[rx_idx++] = data;
+		rx_idx %= RX_MAX;
+		USART2->DR = data;
+	}
+
+
 }
 
 // @TODO handle if data already in buffer
