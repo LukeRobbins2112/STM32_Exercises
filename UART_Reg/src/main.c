@@ -8,6 +8,7 @@
 #include <stdio.h>
 
 #include "usart.h"
+#include "shell.h"
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -38,10 +39,12 @@ int main(void)
   // Enable USART2 IRQ
   NVIC->ISER[1] = (1 << (USART2_IRQn & 0x1F));
 
-  sendData("testing123\r\n", 12);
+  sendData(PROMPT, 8);
+
+  initialize_shell();
 
   while (1)  {
-
+	  process_next_cmd();
   }
 
 

@@ -224,7 +224,7 @@ void USART2_IRQHandler(void){
 
 	// TX buffer empty -- free to write
 	if (USART2->SR & UART_FLAG_TXE) {
-		writeUartByte();
+		writeUartByte(0);
 	}
 
 	// RX buffer not empty -- process data
