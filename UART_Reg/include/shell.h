@@ -10,6 +10,7 @@ void process_next_cmd();
 
 // Specific shell commands
 int print_newline();
+int unknown_cmd();
 int dumpGPIOA();
 
 

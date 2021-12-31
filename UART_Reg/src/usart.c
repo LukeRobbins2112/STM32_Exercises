@@ -54,7 +54,9 @@ void sendData(const char* data, int len){
 	int bufRemaining = TX_MAX - bytesEnqueued;
 	if (lenToSend > bufRemaining) {
 		for (int i = 0; i < bytesEnqueued; i++) {
+			USART2->CR1 &= ~(1 << 7); // Disable interrupt
 			writeUartByte(1);
+			USART2->CR1 |= (1 << 7); // Enable TXEIE interrupt
 		}
 	}
 

@@ -33,7 +33,8 @@ void initialize_shell() {
 
 	// Commands
 	cmd_table[0] = (struct Command){.cmd = "NEWLINE", .func = print_newline};
-	cmd_table[1] = (struct Command){.cmd = "GPIOA", .func = dumpGPIOA};
+	cmd_table[1] = (struct Command){.cmd = "UNKNOWN", .func = unknown_cmd};
+	cmd_table[2] = (struct Command){.cmd = "GPIOA", .func = dumpGPIOA};
 }
 
 void add_cmd(const char* cmd, int cmd_len) {
@@ -74,12 +75,20 @@ void process_next_cmd() {
 
 	// Use lookup table of handler functions, based on provided command name
 	// @TODO handle multiple words, separated by spaces -- for arguments
+	int cmd_found = 0;
 	for (int i = 0; i < NUM_COMMANDS; i++) {
 		if (strcmp(cmd->cmd, cmd_table[i].cmd) == 0) {
+			cmd_found = 1;
 			cmd_table[i].func();
-			cmd->is_available = 1; // Mark as processed
 		}
 	}
+
+	if (!cmd_found) {
+		unknown_cmd();
+	}
+
+	// Valid or invalid, we processed the command
+	cmd->is_available = 1; // Mark as processed
 }
 
 // Assumes data is shifted into bottom 4 bits
@@ -167,5 +176,12 @@ int dumpGPIOA() {
 
 int print_newline() {
 	sendData(PROMPT, strlen(PROMPT));
+	return 0;
+}
+
+int unknown_cmd() {
+	const char* msg = "\r\nUNKNOWN COMMAND\r\n";
+	sendData(msg, strlen(msg));
+	print_newline();
 	return 0;
 }
