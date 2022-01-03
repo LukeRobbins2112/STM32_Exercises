@@ -23,6 +23,7 @@
 #include "stm32f1xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 #include "usart.h"
+#include "sys_tick.h"
 
 /* Private typedef -----------------------------------------------------------*/
 
@@ -171,6 +172,7 @@ void PendSV_Handler(void)
 void SysTick_Handler(void)
 {
   /* USER CODE BEGIN SysTick_IRQn 0 */
+  tick(); // Increment system ticks
 
   /* USER CODE END SysTick_IRQn 0 */
   HAL_IncTick();

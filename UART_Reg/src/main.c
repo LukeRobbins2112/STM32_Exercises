@@ -9,6 +9,7 @@
 
 #include "usart.h"
 #include "shell.h"
+#include "sys_tick.h"
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -19,6 +20,9 @@ int main(void)
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
   SystemClock_Config();
+
+  // Set up SysTick -- fire every 1/4 second
+  init_sys_tick(16000000);
 
   // Enable clocks
   RCC->APB2ENR |= (0x1 << 2); // GPIOA Enabled
