@@ -24,6 +24,7 @@
 /* Private includes ----------------------------------------------------------*/
 #include "usart.h"
 #include "sys_tick.h"
+#include "timer.h"
 
 /* Private typedef -----------------------------------------------------------*/
 
@@ -236,6 +237,11 @@ void USART2_IRQHandler(void){
 	}
 
 	// Clear relevant flags
+}
+
+void TIM2_IRQHandler(void) {
+	TIM2->SR = 0; // Clear UIF
+	timer_fired();
 }
 
 /* USER CODE END 1 */

@@ -36,8 +36,8 @@ int main(void)
   RCC->APB1ENR |= (0x1 << 17); // USART 2 Enabled
   RCC->APB1ENR |= (0x1 << 0); // TIM 2 Enabled
 
-  TimerInit_t init = {.count = 0xFFFF, .prescaler = 5000, .direction = COUNT_DOWN, .pulse_mode = ONE_SHOT};
-  start_countdown_blocking(&init);
+  TimerInit_t init = {.count = 0xFFFE, .prescaler = 5000, .direction = COUNT_DOWN, .pulse_mode = ONE_SHOT, .timer_action = INTERRUPT};
+  init_timer(&init);
 
   // Set up / configure GPIOA
   // PA2 = output, alternate function push/pull

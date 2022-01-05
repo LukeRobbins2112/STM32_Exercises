@@ -3,7 +3,7 @@
 
 static int timer_done = 0;
 
-void start_countdown_blocking(TimerInit_t* timer_init) {
+void init_timer(TimerInit_t* timer_init) {
 	// Enable (stop) the timer in case it's running
 	TIM2->CR1 = 0;
 
@@ -31,14 +31,30 @@ void start_countdown_blocking(TimerInit_t* timer_init) {
 	// Clear UIF from software update event
 	TIM2->SR = 0;
 
+	// If configured for interrupts, set that up here
+	if (timer_init->timer_action == INTERRUPT) {
+		// Set interrupt enable for update event
+		TIM2->DIER |= (0b1 << 0);
+
+		// Enable TIM2 IRQ (28)
+		NVIC->ISER[0] = (1 << (TIM2_IRQn & 0x1F));
+	}
+
 	// Enable (start) the timer
 	TIM2->CR1 |= (0b1 << 0);
 
-	// wait for flag
-	while(0 == (TIM2->SR & 1)) {
-		// Wait
+	if (timer_init->timer_action == BLOCK) {
+		// wait for flag
+		while(0 == (TIM2->SR & 1)) {
+			// Wait
+		}
+		TIM2->SR = 0;
+		timer_done++;
 	}
-	TIM2->SR = 0;
-	timer_done++;
 
+
+}
+
+void timer_fired() {
+	timer_done++;
 }

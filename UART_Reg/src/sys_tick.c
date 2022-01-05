@@ -1,5 +1,7 @@
 #include "sys_tick.h"
 
+#define MSEC_PER_SEC 1000u
+
 static uint32_t Ticks = 0;
 
 void init_sys_tick(uint32_t reload_val) {
@@ -25,3 +27,14 @@ void tick() {
 uint32_t get_ticks() {
 	return Ticks;
 }
+
+
+
+// @TODO implement this when you have the energy to calculate frequency from RCC->CFGR settings
+//void set_systick_interval_ms(uint32_t period_ms) {
+//	uint32_t clock_freq = ???;
+//	uint32_t reload_val = (clock_freq / MSEC_PER_SEC) * period_ms; // clock ticks/ms * num_ms
+//	reload_val &= SysTick_LOAD_RELOAD_Msk; // Only use lower 24 bits
+//	SysTick->LOAD = (reload_val - 1);
+//
+//}
