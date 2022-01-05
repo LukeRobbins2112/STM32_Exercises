@@ -10,6 +10,7 @@
 #include "usart.h"
 #include "shell.h"
 #include "sys_tick.h"
+#include "timer.h"
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -21,12 +22,22 @@ int main(void)
   HAL_Init();
   SystemClock_Config();
 
+  // Freeze timers on debug
+  __HAL_DBGMCU_FREEZE_TIM1();    // Enable Timer1 Freeze on Debug
+  __HAL_DBGMCU_FREEZE_TIM2();    // Enable Timer2 Freeze on Debug
+  __HAL_DBGMCU_FREEZE_TIM3();    // Enable Timer3 Freeze on Debug
+  __HAL_DBGMCU_FREEZE_TIM4();    // Enable Timer4 Freeze on Debug
+
   // Set up SysTick -- fire every 1/4 second
   init_sys_tick(16000000);
 
   // Enable clocks
   RCC->APB2ENR |= (0x1 << 2); // GPIOA Enabled
   RCC->APB1ENR |= (0x1 << 17); // USART 2 Enabled
+  RCC->APB1ENR |= (0x1 << 0); // TIM 2 Enabled
+
+  TimerInit_t init = {.count = 0xFFFF, .prescaler = 5000, .direction = COUNT_DOWN, .pulse_mode = ONE_SHOT};
+  start_countdown_blocking(&init);
 
   // Set up / configure GPIOA
   // PA2 = output, alternate function push/pull
