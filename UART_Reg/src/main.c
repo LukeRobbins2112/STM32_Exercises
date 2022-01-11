@@ -11,6 +11,7 @@
 #include "shell.h"
 #include "sys_tick.h"
 #include "timer.h"
+#include "i2c.h"
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -38,6 +39,16 @@ int main(void)
 
   TimerInit_t init = {.count = 0xFFFE, .prescaler = 5000, .direction = COUNT_DOWN, .pulse_mode = ONE_SHOT, .timer_action = INTERRUPT};
   init_timer(&init);
+
+  // Set up I2C
+  I2C_Init_t i2c_init_master;
+  i2c_init_master.role = I2C_MASTER;
+  i2c_init_master.clk_stretch = STRETCH;
+  i2c_init(&i2c_init_master);
+
+  // Test transaction
+  uint8_t data[3] = {0x1, 0x2, 0x3};
+  i2c_transaction(0x0, I2C_WRITE, data, 3);
 
   // Set up / configure GPIOA
   // PA2 = output, alternate function push/pull
