@@ -48,7 +48,7 @@ int main(void)
 
   // Test transaction
   uint8_t data[3] = {0x1, 0x2, 0x3};
-  i2c_transaction(0x0, I2C_WRITE, data, 3);
+  i2c_transaction(0x68, I2C_READ, data, 3);
 
   // Set up / configure GPIOA
   // PA2 = output, alternate function push/pull

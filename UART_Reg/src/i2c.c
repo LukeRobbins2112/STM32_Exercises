@@ -30,7 +30,7 @@ uint8_t i2c_init(I2C_Init_t* i2c_init) {
 	// ------------ GPIO setup ------------
 	// PB6 as SCL, PB7 as SDA
 	// Alternate function output, open-drain
-	// @TODO do I need to explicitly set pulup
+	// @TODO do I need to explicitly set pullup
 	GPIOB->CRL |= (0b1101 << (6 * 4)); // PB6
 	GPIOB->CRL |= (0b1101 << (7 * 4)); // PB7
 
@@ -158,7 +158,8 @@ void send_start() {
 
 	// Wait for start condition flag to set
 	// Cleared on SR1 read + DR write (which occurs on send_addr)
-	while(0 == (I2C1->SR1 & 0b1 << 0)) {}
+	while(0 == (I2C1->SR1 & (0b1 << 0))) {}
+	int stat = I2C2->SR2; // Clear START flag
 }
 
 
@@ -166,7 +167,7 @@ void send_stop() {
 	I2C1->CR1 |= (0b1 << I2C_STOP);
 
 	// Wait for M/S flag to indicate transition to slave mode
-	while(0 != (I2C1->SR2 & 0b1 << 0)) {}
+	while(0 != (I2C1->SR2 & (0b1 << 0))) {}
 }
 
 
