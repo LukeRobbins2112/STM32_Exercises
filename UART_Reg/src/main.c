@@ -12,6 +12,7 @@
 #include "sys_tick.h"
 #include "timer.h"
 #include "i2c.h"
+#include "rtc.h"
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -47,8 +48,7 @@ int main(void)
   i2c_init(&i2c_init_master);
 
   // Test transaction
-  uint8_t data[3] = {0x1, 0x2, 0x3};
-  i2c_transaction(0x68, I2C_READ, data, 3);
+  uint8_t seconds = rtc_read_reg(0x00);
 
   // Set up / configure GPIOA
   // PA2 = output, alternate function push/pull
