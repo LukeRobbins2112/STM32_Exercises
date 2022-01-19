@@ -9,10 +9,17 @@
 #define I2C_TXE 7
 #define ARLO 9
 
+#define I2C_ENABLE 0
 #define I2C_START 8
 #define I2C_STOP  9
+#define SWRST 15
 
 static uint32_t arlo_count = 0;
+
+// -------------------------------------------------
+// Function Declarations
+// -------------------------------------------------
+static void I2C_ClearBusyFlagErratum();
 
 // -------------------------------------------------
 // Main Functionality
@@ -27,12 +34,15 @@ uint8_t i2c_init(I2C_Init_t* i2c_init) {
 	RCC->APB1ENR |= (0b1 << 21); // I2C1
 	RCC->APB2ENR |= (0b1 << 3); // Enable clock for GPIOB
 
-	// ------------ GPIO setup ------------
-	// PB6 as SCL, PB7 as SDA
-	// Alternate function output, open-drain
-	// @TODO do I need to explicitly set pullup
-	GPIOB->CRL |= (0b1101 << (6 * 4)); // PB6
-	GPIOB->CRL |= (0b1101 << (7 * 4)); // PB7
+	if (I2C1->SR2 & 0b1 << BUS_BUSY) {
+		I2C_ClearBusyFlagErratum();
+	} else {
+		// ------------ Normal GPIO setup ------------
+		// PB6 as SCL, PB7 as SDA
+		// Alternate function output, open-drain
+		GPIOB->CRL |= (0b1101 << (6 * 4)); // PB6
+		GPIOB->CRL |= (0b1101 << (7 * 4)); // PB7
+	}
 
 	// ------------ Clocking setup ------------
 
@@ -171,7 +181,61 @@ void send_stop() {
 }
 
 
+static void I2C_ClearBusyFlagErratum() {
+	// 1. Disable the I2C peripheral by clearing the PE bit in I2Cx_CR1 register.
+	I2C1->CR1 &= ~(0b1 << I2C_ENABLE);
 
+	// 2. Configure SCL and SDA I/Os as General Purpose Output Open-Drain, High level (Write 1 to GPIOx_ODR).
+	// Open Drain Mode: A “0” in the Output register activates the N-MOS while a “1” in
+	// the Output register leaves the port in Hi-Z (the P-MOS is never activated)
+	GPIOB->CRL |= (0b0101 << (6 * 4)); // PB6
+	GPIOB->CRL |= (0b0101 << (7 * 4)); // PB7
+	GPIOB->ODR |= (0b1 << 6);
+	GPIOB->ODR |= (0b1 << 7);
+
+	// 3. Check SCL and SDA High level in GPIOx_IDR.
+	while (!(GPIOB->IDR & 0b1 << 6)) {}
+	while (!(GPIOB->IDR & 0b1 << 7)) {}
+
+	// 4. Configure the SDA I/O as General Purpose Output Open-Drain, Low level (Write 0 to GPIOx_ODR).
+	// Already configured as GP OD, so just write Low level?
+	GPIOB->ODR &= ~(0b1 << 7);
+
+	// 5. Check SDA Low level in GPIOx_IDR.
+	while ((GPIOB->IDR & 0b1 << 7)) {}
+
+	// 6. Configure the SCL I/O as General Purpose Output Open-Drain, Low level (Write 0 to GPIOx_ODR).
+	GPIOB->ODR &= ~(0b1 << 6);
+
+	// 7. Check SCL Low level in GPIOx_IDR
+	while ((GPIOB->IDR & 0b1 << 6)) {}
+
+	// 8. Configure the SCL I/O as General Purpose Output Open-Drain, High level (Write 1 to GPIOx_ODR).
+	GPIOB->ODR |= (0b1 << 6);
+
+	// 9. Check SCL High level in GPIOx_IDR.
+	while (!(GPIOB->IDR & 0b1 << 6)) {}
+
+	// 10. Configure the SDA I/O as General Purpose Output Open-Drain , High level (Write 1 to GPIOx_ODR)
+	GPIOB->ODR |= (0b1 << 7);
+
+	// 11. Check SDA High level in GPIOx_IDR.
+	while (!(GPIOB->IDR & 0b1 << 7)) {}
+
+	// 12. Configure the SCL and SDA I/Os as Alternate function Open-Drain.
+	GPIOB->CRL |= (0b1101 << (6 * 4)); // PB6
+	GPIOB->CRL |= (0b1101 << (7 * 4)); // PB7
+
+	// 13. Set SWRST bit in I2Cx_CR1 register.
+	I2C1->CR1 |= (0b1 << SWRST);
+
+	// 14. Clear SWRST bit in I2Cx_CR1 register.
+	I2C1->CR1 &= ~(0b1 << SWRST);
+
+	// 15. Enable the I2C peripheral by setting the PE bit in I2Cx_CR1 register.
+	// Do this after the rest of the configuration
+	// I2C1->CR1 |= (0b1 << I2C_ENABLE);
+}
 
 
 

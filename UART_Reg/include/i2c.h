@@ -24,8 +24,8 @@ typedef enum I2C_RW {
 } I2C_RW_e;
 
 typedef enum I2C_Ack {
-	I2C_ACK = 0,
-	I2C_NO_ACK = 1,
+	I2C_NO_ACK = 0,
+	I2C_ACK = 1,
 } I2C_Ack_e;
 
 uint8_t i2c_init(I2C_Init_t* i2c_init);
