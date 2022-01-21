@@ -48,7 +48,11 @@ int main(void)
   i2c_init(&i2c_init_master);
 
   // Test transaction
-  uint8_t seconds = rtc_read_reg(0x00);
+  uint8_t hour, min, sec;
+  rtc_get_time(&hour, &min, &sec);
+  char time_buf[6];
+  snprintf(time_buf, 6, "%d:%d", min, sec);
+
 
   // Set up / configure GPIOA
   // PA2 = output, alternate function push/pull
@@ -66,6 +70,7 @@ int main(void)
   NVIC->ISER[1] = (1 << (USART2_IRQn & 0x1F));
 
   sendData(PROMPT, 8);
+  sendData(time_buf, strlen(time_buf));
 
   initialize_shell();
 

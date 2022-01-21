@@ -11,6 +11,8 @@ enum RTC_REGISTERS {
 	YEARS_RTC = 0x6
 };
 
+// Function declarations
+static uint8_t bcd2int(uint8_t num);
 
 // helper
 uint8_t set_reg_ptr(uint8_t regNum) {
@@ -47,11 +49,17 @@ uint8_t rtc_get_time(uint8_t* hour, uint8_t* min, uint8_t* sec) {
 	// Perform our read
 	uint8_t data[3];
 	i2c_transaction(DS3231_I2C_ADDR, I2C_READ, &data, 3);
-	*sec = data[0];
-	*min = data[1];
+	*sec = bcd2int(data[0]);
+	*min = bcd2int(data[1]);
 	*hour = data[2];
 
 	return 0;
+}
+
+
+static uint8_t bcd2int(uint8_t num) {
+	// High byte * 10 + low byte
+	return ((num & 0xF0)>>4)*10 + (num & 0x0F);
 }
 
 
