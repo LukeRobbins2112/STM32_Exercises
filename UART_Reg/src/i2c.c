@@ -12,6 +12,7 @@
 #define I2C_ENABLE 0
 #define I2C_START 8
 #define I2C_STOP  9
+#define I2C_ACK_BIT 10
 #define SWRST 15
 
 static uint32_t arlo_count = 0;
@@ -34,15 +35,34 @@ uint8_t i2c_init(I2C_Init_t* i2c_init) {
 	RCC->APB1ENR |= (0b1 << 21); // I2C1
 	RCC->APB2ENR |= (0b1 << 3); // Enable clock for GPIOB
 
+	// If we got locked up last time, clear this
+	// Will not fix us actively driving SDA low, but if BUSY bit is set by a glitch
 	if (I2C1->SR2 & 0b1 << BUS_BUSY) {
-		I2C_ClearBusyFlagErratum();
-	} else {
-		// ------------ Normal GPIO setup ------------
-		// PB6 as SCL, PB7 as SDA
-		// Alternate function output, open-drain
-		GPIOB->CRL |= (0b1101 << (6 * 4)); // PB6
-		GPIOB->CRL |= (0b1101 << (7 * 4)); // PB7
+		I2C1->CR1 |= (0b1 << SWRST);
+			for (int i = 0; i < 1000; i++){
+				if (i == 998){
+					break;
+				}
+			}
+		I2C1->CR1 &= ~(0b1 << SWRST);
 	}
+
+
+	// ------------ Normal GPIO setup ------------
+	// PB6 as SCL, PB7 as SDA
+	// Alternate function output, open-drain
+	GPIOB->CRL |= (0b1101 << (6 * 4)); // PB6
+	GPIOB->CRL |= (0b1101 << (7 * 4)); // PB7
+
+	// PB3 as RST -- General Purpose output Push-Pull
+//	GPIOB->CRL |= (0b0001 << (3 * 4)); // PB3
+//	GPIOB->BSRR = (0b1 << 3);
+//	for(int i = 0; i < 1000; i++){
+//		if (i == 998) {
+//			break;
+//		}
+//	}
+//	GPIOB->BRR = (0b1 << 3);
 
 	// ------------ Clocking setup ------------
 
@@ -78,7 +98,11 @@ uint8_t i2c_init(I2C_Init_t* i2c_init) {
 	}
 
 	// Enable the peripheral, once config is done
-	I2C1->CR1 |= (0b1 << 0);
+	if (I2C1->SR2 & 0b1 << BUS_BUSY) {
+		I2C_ClearBusyFlagErratum();
+	} else {
+		I2C1->CR1 |= (0b1 << 0);
+	}
 
 	return 0;
 }
@@ -94,7 +118,9 @@ uint8_t i2c_transaction(uint8_t addr, I2C_RW_e rw, uint8_t* data, uint16_t len) 
 		if (rw == I2C_WRITE) {
 			i2c_send_data(data[i]);
 		} else {
-			data[i] = i2c_receive_data(I2C_ACK);
+			// Do not ack on the last byte
+			I2C_Ack_e should_ack = (i == (len-1)) ? I2C_NO_ACK : I2C_ACK;
+			data[i] = i2c_receive_data(should_ack);
 		}
 	}
 
@@ -146,8 +172,12 @@ uint8_t i2c_send_data(uint8_t data) {
 }
 
 uint8_t i2c_receive_data(I2C_Ack_e ack) {
-	// Set ACK bit
-	I2C1->CR1 |= (ack << 10);
+	// Set or clear ACK bit
+	if (I2C_ACK == ack) {
+		I2C1->CR1 |= (0b1 << I2C_ACK_BIT);
+	} else {
+		I2C1->CR1 &= ~(0b1 << I2C_ACK_BIT);
+	}
 
 	// Monitor RxNE flag. Once set, read data register
 	while(0 == (I2C1->SR1 & (0b1 << I2C_RXNE))) {}
@@ -188,14 +218,20 @@ static void I2C_ClearBusyFlagErratum() {
 	// 2. Configure SCL and SDA I/Os as General Purpose Output Open-Drain, High level (Write 1 to GPIOx_ODR).
 	// Open Drain Mode: A “0” in the Output register activates the N-MOS while a “1” in
 	// the Output register leaves the port in Hi-Z (the P-MOS is never activated)
+	// We're OR'ing, so first clear original config
+	GPIOB->CRL &= ~(0b1111 << (6 * 4)); // PB6
+	GPIOB->CRL &= ~(0b1111 << (7 * 4)); // PB7
+
 	GPIOB->CRL |= (0b0101 << (6 * 4)); // PB6
 	GPIOB->CRL |= (0b0101 << (7 * 4)); // PB7
-	GPIOB->ODR |= (0b1 << 6);
-	GPIOB->ODR |= (0b1 << 7);
+
+	GPIOB->ODR = (0b11 << 6);
 
 	// 3. Check SCL and SDA High level in GPIOx_IDR.
-	while (!(GPIOB->IDR & 0b1 << 6)) {}
-	while (!(GPIOB->IDR & 0b1 << 7)) {}
+	// while (!(GPIOB->IDR & 0b1 << 6)) {}
+	// while (!(GPIOB->IDR & 0b1 << 7)) {}
+	if ((GPIOB->IDR & 0b1 << 6)) {}
+	if ((GPIOB->IDR & 0b1 << 7)) {}
 
 	// 4. Configure the SDA I/O as General Purpose Output Open-Drain, Low level (Write 0 to GPIOx_ODR).
 	// Already configured as GP OD, so just write Low level?
@@ -220,9 +256,13 @@ static void I2C_ClearBusyFlagErratum() {
 	GPIOB->ODR |= (0b1 << 7);
 
 	// 11. Check SDA High level in GPIOx_IDR.
-	while (!(GPIOB->IDR & 0b1 << 7)) {}
+	// while (!(GPIOB->IDR & 0b1 << 7)) {}
+	if ((GPIOB->IDR & 0b1 << 7)) {}
 
 	// 12. Configure the SCL and SDA I/Os as Alternate function Open-Drain.
+	// We're OR'ing, so first clear original config
+	GPIOB->CRL &= ~(0b1111 << (6 * 4)); // PB6
+	GPIOB->CRL &= ~(0b1111 << (7 * 4)); // PB7
 	GPIOB->CRL |= (0b1101 << (6 * 4)); // PB6
 	GPIOB->CRL |= (0b1101 << (7 * 4)); // PB7
 
@@ -234,7 +274,7 @@ static void I2C_ClearBusyFlagErratum() {
 
 	// 15. Enable the I2C peripheral by setting the PE bit in I2Cx_CR1 register.
 	// Do this after the rest of the configuration
-	// I2C1->CR1 |= (0b1 << I2C_ENABLE);
+	I2C1->CR1 |= (0b1 << I2C_ENABLE);
 }
 
 
